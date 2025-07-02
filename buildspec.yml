@@ -49,14 +49,75 @@
 #    - Dockerrun.aws.json
 #  discard-paths: yes
 
+#version: 0.2
+#
+#phases:
+#  install:
+#    commands:
+#      - echo "Preparing artifact for Elastic Beanstalk..."
+#
+#artifacts:
+#  files:
+#    - '**/*'
+#  discard-paths: no
+
+
 version: 0.2
 
-phases:
-  install:
-    commands:
-      - echo "Preparing artifact for Elastic Beanstalk..."
+env:
+  variables:
+    AWS_REGION: ap-south-1
+    ECR_REPO: 906733482679.dkr.ecr.ap-south-1.amazonaws.com/test-application
+    ECS_CLUSTER: test-application-cluster
+    ECS_SERVICE: test-task-definition-service-gjax2e9s
+    ECS_TASK_DEFINITION_FAMILY: test-task-definition
+    CONTAINER_NAME: web  # must match the container name in your task definition
 
-artifacts:
-  files:
-    - '**/*'
-  discard-paths: no
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=$COMMIT_HASH
+      - IMAGE_URI=$ECR_REPO:$IMAGE_TAG
+
+  build:
+    commands:
+      - echo Building Docker image...
+      - docker build -t $IMAGE_URI .
+
+  post_build:
+    commands:
+      - echo Pushing Docker image to ECR...
+      - docker push $IMAGE_URI
+      - echo Updating ECS service...
+      - |
+        TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION_FAMILY)
+        NEW_TASK_DEF=$(echo $TASK_DEFINITION | \
+          jq --arg IMAGE "$IMAGE_URI" --arg NAME "$CONTAINER_NAME" \
+          '.taskDefinition | {
+            family,
+            containerDefinitions: [.containerDefinitions[] | if .name == $NAME then .image = $IMAGE | . else . end],
+            executionRoleArn,
+            taskRoleArn,
+            networkMode,
+            requiresCompatibilities,
+            cpu,
+            memory
+          }')
+        echo "$NEW_TASK_DEF" > new-task-def.json
+
+      - |
+        REVISION=$(aws ecs register-task-definition \
+          --cli-input-json file://new-task-def.json \
+          --region $AWS_REGION \
+          | jq -r '.taskDefinition.taskDefinitionArn')
+
+      - |
+        aws ecs update-service \
+          --cluster $ECS_CLUSTER \
+          --service $ECS_SERVICE \
+          --task-definition $REVISION \
+          --region $AWS_REGION
+
