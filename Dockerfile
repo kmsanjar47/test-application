@@ -1,6 +1,6 @@
 #DockerFile using gunicorm for production
 
-FROM python:3.12-slim
+FROM public.ecr.aws/docker/library/python:3.12-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
