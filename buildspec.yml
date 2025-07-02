@@ -67,7 +67,7 @@ version: 0.2
 env:
   variables:
     AWS_REGION: ap-south-1
-    ECR_REPO: 906733482679.dkr.ecr.ap-south-1.amazonaws.com/test-application
+    ECR_REPO: 906733482679.dkr.ecr.ap-south-1.amazonaws.com/test/test-application
     ECS_CLUSTER: test-application-cluster
     ECS_SERVICE: test-task-definition-service-gjax2e9s
     ECS_TASK_DEFINITION_FAMILY: test-task-definition
