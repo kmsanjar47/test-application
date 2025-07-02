@@ -1,50 +1,62 @@
+#version: 0.2
+#
+#env:
+#  variables:
+#    REPOSITORY_URI: 906733482679.dkr.ecr.ap-south-1.amazonaws.com/test-application
+#    AWS_REGION: ap-south-1
+#    CONTAINER_PORT: 8000
+#
+#phases:
+#  pre_build:
+#    commands:
+#      - echo Logging in to Amazon ECR...
+#      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+#      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+#      - IMAGE_TAG=$COMMIT_HASH
+#      - IMAGE_URI=$REPOSITORY_URI:$IMAGE_TAG
+#
+#  build:
+#    commands:
+#      - echo Building Docker image...
+#      - docker build -t $IMAGE_URI .
+#
+#  post_build:
+#    commands:
+#      - echo Pushing Docker image to ECR...
+#      - docker push $IMAGE_URI
+#      - echo Creating Dockerrun.aws.json...
+#      - |
+#        cat > Dockerrun.aws.json <<EOF
+#        {
+#          "AWSEBDockerrunVersion": "1",
+#          "Image": {
+#            "Name": "$IMAGE_URI",
+#            "Update": "true"
+#          },
+#          "Ports": [
+#            {
+#              "ContainerPort": $CONTAINER_PORT
+#            }
+#          ]
+#        }
+#        EOF
+#      - echo Zipping for Elastic Beanstalk...
+##      - zip -r deploy-package.zip Dockerrun.aws.json
+#
+#artifacts:
+#  files:
+##    - deploy-package.zip
+#    - Dockerrun.aws.json
+#  discard-paths: yes
+
 version: 0.2
 
-env:
-  variables:
-    REPOSITORY_URI: 906733482679.dkr.ecr.ap-south-1.amazonaws.com/test-application
-    AWS_REGION: ap-south-1
-    CONTAINER_PORT: 8000
-
 phases:
-  pre_build:
+  install:
     commands:
-      - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
-      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - IMAGE_TAG=$COMMIT_HASH
-      - IMAGE_URI=$REPOSITORY_URI:$IMAGE_TAG
-
-  build:
-    commands:
-      - echo Building Docker image...
-      - docker build -t $IMAGE_URI .
-
-  post_build:
-    commands:
-      - echo Pushing Docker image to ECR...
-      - docker push $IMAGE_URI
-      - echo Creating Dockerrun.aws.json...
-      - |
-        cat > Dockerrun.aws.json <<EOF
-        {
-          "AWSEBDockerrunVersion": "1",
-          "Image": {
-            "Name": "$IMAGE_URI",
-            "Update": "true"
-          },
-          "Ports": [
-            {
-              "ContainerPort": $CONTAINER_PORT
-            }
-          ]
-        }
-        EOF
-      - echo Zipping for Elastic Beanstalk...
-#      - zip -r deploy-package.zip Dockerrun.aws.json
+      - echo "Preparing artifact for Elastic Beanstalk..."
 
 artifacts:
   files:
-#    - deploy-package.zip
-    - Dockerrun.aws.json
-  discard-paths: yes
+    - '**/*'
+  discard-paths: no
