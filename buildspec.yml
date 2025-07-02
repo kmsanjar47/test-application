@@ -41,8 +41,10 @@ phases:
         }
         EOF
       - echo Zipping for Elastic Beanstalk...
-      - zip -r deploy-package.zip Dockerrun.aws.json
+#      - zip -r deploy-package.zip Dockerrun.aws.json
 
 artifacts:
   files:
-    - deploy-package.zip
+#    - deploy-package.zip
+    - Dockerrun.aws.json
+  discard-paths: yes
